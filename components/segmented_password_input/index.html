@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { color: #17324d; font-family: 'MarketingDashboardFont', 'Malgun Gothic', sans-serif; }
+    body { margin: 0; font-family: 'MarketingDashboardFont', 'Malgun Gothic', sans-serif; }
+    .label { font-size: 14px; font-weight: 700; margin: 0 0 7px; }
+    .help { color: #52677c; font-size: 12px; line-height: 1.45; margin: 0 0 10px; }
+    .slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    input { box-sizing: border-box; width: 100%; min-width: 0; height: 42px; padding: 8px 10px; border: 1px solid #b8c9d8; border-radius: 8px; background: #fff; color: #17324d; font-size: 16px; letter-spacing: 2px; text-align: center; outline: none; }
+    input:focus { border-color: #1769aa; box-shadow: 0 0 0 2px #b8daf4; }
+    input:disabled { background: #eef2f6; }
+    .count { color: #61768a; font-size: 11px; margin-top: 5px; text-align: right; }
+    @media (max-width: 420px) { .slots { gap: 5px; } input { padding: 7px 4px; } }
+  </style>
+  <style id="app-font"></style>
+</head>
+<body>
+  <div class="label" id="label"></div>
+  <div class="help" id="help"></div>
+  <div class="slots" id="slots"></div>
+  <div class="count" id="count">0 / 16</div>
+  <script>
+    const parent = window.parent;
+    const slots = document.getElementById("slots");
+    let inputs = [];
+    let initialized = false;
+    let lastValue = "";
+    let lastIncoming = null;
+    function send(type, extra = {}) { parent.postMessage({ isStreamlitMessage: true, type, ...extra }, "*"); }
+    send("streamlit:componentReady", { apiVersion: 1 });
+    send("streamlit:setFrameHeight", { height: 106 });
+    function clean(value) { return String(value || "").replace(/\s/g, "").slice(0, 16); }
+    function putValue(value, focusNext = false) {
+      const normalized = clean(value);
+      inputs.forEach((input, index) => { input.value = normalized.slice(index * 4, index * 4 + 4); });
+      lastValue = normalized;
+      document.getElementById("count").textContent = `${normalized.length} / 16`;
+      if (focusNext && normalized.length < 16) inputs[Math.floor(normalized.length / 4)]?.focus();
+      send("streamlit:setComponentValue", { value: normalized, dataType: "json" });
+    }
+    function render(args) {
+      if (args.font_css) document.getElementById("app-font").textContent = args.font_css;
+      document.getElementById("label").textContent = args.label || "앱 비밀번호";
+      document.getElementById("help").textContent = args.help_text || "4자리씩 입력하세요.";
+      if (!initialized) {
+        for (let i = 0; i < 4; i++) {
+          const input = document.createElement("input");
+          input.type = "password"; input.inputMode = "text"; input.autocomplete = "off";
+          input.maxLength = 4; input.setAttribute("aria-label", `${i + 1}번째 4자리 비밀번호`);
+          input.placeholder = "••••"; input.disabled = Boolean(args.disabled);
+          input.addEventListener("input", () => {
+            const raw = input.value.replace(/\s/g, "").slice(0, 4);
+            input.value = raw;
+            const all = inputs.map(item => item.value).join("");
+            lastValue = all;
+            document.getElementById("count").textContent = `${all.length} / 16`;
+            send("streamlit:setComponentValue", { value: all, dataType: "json" });
+            if (raw.length === 4 && i < 3) inputs[i + 1].focus();
+          });
+          input.addEventListener("keydown", event => {
+            if (event.key === "Backspace" && !input.value && i > 0) inputs[i - 1].focus();
+          });
+          input.addEventListener("paste", event => {
+            const pasted = clean((event.clipboardData || window.clipboardData).getData("text"));
+            if (!pasted) return;
+            event.preventDefault(); putValue(pasted, true);
+          });
+          inputs.push(input); slots.appendChild(input);
+        }
+        initialized = true;
+      }
+      inputs.forEach(input => { input.disabled = Boolean(args.disabled); });
+      const incoming = clean(args.value ?? args.default ?? "");
+      if (incoming !== lastIncoming && !(document.activeElement && inputs.includes(document.activeElement))) {
+        inputs.forEach((input, index) => { input.value = incoming.slice(index * 4, index * 4 + 4); });
+        lastValue = incoming; lastIncoming = incoming;
+        document.getElementById("count").textContent = `${incoming.length} / 16`;
+      }
+    }
+    window.addEventListener("message", event => {
+      if (event.data?.type === "streamlit:render") render(event.data.args || {});
+    });
+  </script>
+</body>
+</html>

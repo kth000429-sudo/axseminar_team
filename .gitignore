@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+OPENAI_API_KEY.env
+.streamlit/secrets.toml
+data/applications.csv
+data/mail_log.csv
+data/region_overrides.json
+/streamlit_cloud_deploy.zip

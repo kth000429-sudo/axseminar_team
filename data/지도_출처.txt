@@ -1,0 +1,5 @@
+경계 파일: data/sigungu.geojson
+원본: 국가공간정보포털(V-World) 행정구역 경계(2023-07-29 배포)
+가공 및 간소화: KnellBalm/kr-admin-geojson (Douglas-Peucker tolerance 0.0005도)
+저장소: https://github.com/KnellBalm/kr-admin-geojson
+이용 조건: 출처 표시 필요. 원본 공공데이터 출처와 가공 저장소를 앱 권역 설정 페이지에도 표시합니다.
